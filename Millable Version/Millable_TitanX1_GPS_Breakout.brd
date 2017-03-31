@@ -56,7 +56,7 @@
 <layer number="46" name="Milling" color="3" fill="1" visible="no" active="yes"/>
 <layer number="47" name="Measures" color="7" fill="1" visible="no" active="yes"/>
 <layer number="48" name="Document" color="7" fill="1" visible="no" active="yes"/>
-<layer number="49" name="Reference" color="7" fill="1" visible="no" active="yes"/>
+<layer number="49" name="Reference" color="7" fill="1" visible="yes" active="yes"/>
 <layer number="50" name="dxf" color="7" fill="1" visible="no" active="no"/>
 <layer number="51" name="tDocu" color="6" fill="1" visible="yes" active="yes"/>
 <layer number="52" name="bDocu" color="7" fill="1" visible="no" active="yes"/>
@@ -158,10 +158,10 @@
 <wire x1="0" y1="36.83" x2="40.64" y2="36.83" width="0.3048" layer="20"/>
 <wire x1="40.64" y1="36.83" x2="40.64" y2="0" width="0.3048" layer="20"/>
 <wire x1="40.64" y1="0" x2="0" y2="0" width="0.3048" layer="20"/>
-<text x="16.51" y="-3.556" size="1.016" layer="21" font="vector" ratio="15" rot="R90" align="center-left">SCL</text>
-<text x="19.05" y="-3.556" size="1.016" layer="21" font="vector" ratio="15" rot="R90" align="center-left">SDA</text>
-<text x="21.59" y="-3.556" size="1.016" layer="21" font="vector" ratio="15" rot="R90" align="center-left">3V3</text>
-<text x="24.13" y="-3.556" size="1.016" layer="21" font="vector" ratio="15" rot="R90" align="center-left">GND</text>
+<text x="24.13" y="-3.556" size="1.016" layer="21" font="vector" ratio="15" rot="R90" align="center-left">SCL</text>
+<text x="21.59" y="-3.556" size="1.016" layer="21" font="vector" ratio="15" rot="R90" align="center-left">SDA</text>
+<text x="19.05" y="-3.556" size="1.016" layer="21" font="vector" ratio="15" rot="R90" align="center-left">3V3</text>
+<text x="16.51" y="-3.556" size="1.016" layer="21" font="vector" ratio="15" rot="R90" align="center-left">GND</text>
 <text x="16.51" y="-21.59" size="1.778" layer="51">Joel Bartlett</text>
 </plain>
 <libraries>
@@ -1023,6 +1023,7 @@ These rules have been curated by SparkFuns DFM commitee. After doing much resear
 </polygon>
 <via x="7.62" y="10.16" extent="1-16" drill="0.508"/>
 <via x="7.62" y="26.67" extent="1-16" drill="0.508"/>
+<via x="36.83" y="10.16" extent="1-16" drill="0.508"/>
 </signal>
 <signal name="3.3V">
 <contactref element="J8" pad="2"/>
