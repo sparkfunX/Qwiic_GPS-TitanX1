@@ -1,2 +1,3 @@
-# Titan_X1_GPS
-Titan_X1_GPS Qwiic Breakout
+# Qwiic GPS
+
+A breakboard board for the Titan X1 GPS module including an external antenna connection and RTC backup.
