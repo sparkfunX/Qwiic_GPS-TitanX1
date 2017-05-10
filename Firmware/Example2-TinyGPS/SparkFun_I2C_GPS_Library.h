@@ -51,7 +51,7 @@ class I2CGPS {
     boolean begin(TwoWire &wirePort = Wire, uint32_t i2cSpeed = I2C_SPEED_STANDARD, uint8_t i2caddr = MT333x_ADDR);
 
     void check(); //Checks module for new data
-    uint8_t available(); //Returns available number of bytes. Will call check if zero is available.
+    uint8_t available(); //Returns available number of bytes. Will call check() if zero is available.
     uint8_t read(); //Returns the next available byte
 
     void enableDebugging(Stream &debugPort = Serial); //Output various extra messages to help with debug
