@@ -13,12 +13,10 @@
   take approximately 20ms to read the contents of the I2C buffer from the module.
 
   Hardware Connections:
-  Attach the Qwiic Mux Shield to your RedBoard or Uno.
-  Plug two Qwiic MMA8452Q breakout boards into ports 0 and 1.
+  Attach a Qwiic shield to your RedBoard or Uno.
+  Plug the Qwiic sensor into any port.
   Serial.print it out at 115200 baud to serial monitor.
 */
-
-#include <Wire.h>
 
 #include "SparkFun_I2C_GPS_Library.h" //Use Library Manager or download here: https://github.com/sparkfun/SparkFun_I2C_GPS_Library
 I2CGPS myI2CGPS; //Hook object to the library
@@ -29,13 +27,14 @@ TinyGPSPlus gps; //Declare gps object
 void setup()
 {
   Serial.begin(115200);
-  Serial.println();
   Serial.println("GTOP Read Example");
 
-  myI2CGPS.begin();
-
-  //myI2CGPS.enableDebugging(); //Turn on printing of GPS strings
-  myI2CGPS.disableDebugging(); //Turn on printing of GPS strings
+  if (myI2CGPS.begin() == false)
+  {
+    Serial.println("Module failed to respond. Please check wiring.");
+    while (1); //Freeze!
+  }
+  Serial.println("GPS module found!");
 }
 
 void loop()
@@ -49,17 +48,16 @@ void loop()
   {
     displayInfo();
   }
-
 }
 
 //Display new GPS info
 void displayInfo()
 {
-  if (gps.location.isValid())
-  {
-    //We have new GPS data to deal with!
-    Serial.println();
+  //We have new GPS data to deal with!
+  Serial.println();
 
+  if (gps.time.isValid())
+  {
     Serial.print(F("Date: "));
     Serial.print(gps.date.month());
     Serial.print(F("/"));
@@ -67,38 +65,34 @@ void displayInfo()
     Serial.print(F("/"));
     Serial.print(gps.date.year());
 
-    if (gps.time.isValid())
-    {
-      Serial.print((" Time: "));
-      if (gps.time.hour() < 10) Serial.print(F("0"));
-      Serial.print(gps.time.hour());
-      Serial.print(F(":"));
-      if (gps.time.minute() < 10) Serial.print(F("0"));
-      Serial.print(gps.time.minute());
-      Serial.print(F(":"));
-      if (gps.time.second() < 10) Serial.print(F("0"));
-      Serial.print(gps.time.second());
-    }
+    Serial.print((" Time: "));
+    if (gps.time.hour() < 10) Serial.print(F("0"));
+    Serial.print(gps.time.hour());
+    Serial.print(F(":"));
+    if (gps.time.minute() < 10) Serial.print(F("0"));
+    Serial.print(gps.time.minute());
+    Serial.print(F(":"));
+    if (gps.time.second() < 10) Serial.print(F("0"));
+    Serial.print(gps.time.second());
 
     Serial.println(); //Done printing time
-
-    if (gps.location.isValid())
-    {
-      Serial.print("Location: ");
-      Serial.print(gps.location.lat(), 6);
-      Serial.print(F(", "));
-      Serial.print(gps.location.lng(), 6);
-      Serial.println();
-    }
-    else
-    {
-      Serial.print(F("Location not yet valid"));
-    }
-
   }
   else
   {
-    //Serial.println(F("GPS not yet valid"));
+    Serial.println(F("Time not yet valid"));
+  }
+
+  if (gps.location.isValid())
+  {
+    Serial.print("Location: ");
+    Serial.print(gps.location.lat(), 6);
+    Serial.print(F(", "));
+    Serial.print(gps.location.lng(), 6);
+    Serial.println();
+  }
+  else
+  {
+    Serial.println(F("Location not yet valid"));
   }
 }
 

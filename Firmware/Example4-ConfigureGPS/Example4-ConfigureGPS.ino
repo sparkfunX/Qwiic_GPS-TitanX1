@@ -19,19 +19,15 @@
   approximately 16 days without power.
 
   Hardware Connections:
-  Attach the Qwiic Mux Shield to your RedBoard or Uno.
-  Plug two Qwiic MMA8452Q breakout boards into ports 0 and 1.
+  Attach a Qwiic shield to your RedBoard or Uno.
+  Plug the Qwiic sensor into any port.
   Serial.print it out at 115200 baud to serial monitor.
 */
 
-#include <Wire.h>
-
 #include "SparkFun_I2C_GPS_Library.h" //Use Library Manager or download here: https://github.com/sparkfun/SparkFun_I2C_GPS_Library
-
 I2CGPS myI2CGPS; //Hook object to the library
 
 #include <TinyGPS++.h> //From: https://github.com/mikalhart/TinyGPSPlus
-
 TinyGPSPlus gps; //Declare gps object
 
 //The following tells the TinyGPS library to scan for the PMTK001 sentence
@@ -42,22 +38,23 @@ TinyGPSCustom configureFlag(gps, "PMTK001", 2); //Success/fail flag
 
 String configString;
 
-boolean debug = false;
+boolean debug = false; //Keeps track of the enable/disable of debug printing within the GPS lib
 
 void setup()
 {
   Serial.begin(115200);
   Serial.println("GPS Configuration Example");
 
-  Wire.begin();
-  Wire.setClock(400000); //Run I2C at fast 400kHz
+  if (myI2CGPS.begin() == false)
+  {
+    Serial.println("Module failed to respond. Please check wiring.");
+    while (1); //Freeze!
+  }
+  Serial.println("GPS module found!");
 
-  //enableDebugging(); //Turn on printing of GPS strings
-  myI2CGPS.disableDebugging(); //Turn on printing of GPS strings
+  //myI2CGPS.enableDebugging(); //Turn on printing of GPS strings
+  myI2CGPS.disableDebugging(); //Turn off printing of GPS strings
   debug = false;
-
-  //The responses to these commands are parsed when we do normal listening and parsing
-  //from the GPS module
 
   printMenu();
 }
@@ -77,14 +74,23 @@ void loop()
       //NOTE: You must increase the baud rate to 57600bps or higher to reach 10Hz
       configString = myI2CGPS.createMTKpacket(220, ",100");
       myI2CGPS.sendMTKpacket(configString);
+
+      Serial.println(F("You must increase the baud rate to 57600bps or higher to reach 10Hz"));
     }
     else if (incoming == '2')
     {
-      //Packet 285: Set Pulse per second to occur after 3D fix, and blink for 250ms
-      configString = myI2CGPS.createMTKpacket(285, ",2,25");
+      //Packet 220: Set time between fixes (update rate)
+      //Milliseconds between output. 100 to 10,000 is allowed.
+      configString = myI2CGPS.createMTKpacket(220, ",1000"); //Set to 1Hz
       myI2CGPS.sendMTKpacket(configString);
     }
     else if (incoming == '3')
+    {
+      //Packet 285: Set Pulse per second to occur after 3D fix, and blink for 25ms
+      configString = myI2CGPS.createMTKpacket(285, ",2,25");
+      myI2CGPS.sendMTKpacket(configString);
+    }
+    else if (incoming == '4')
     {
       //Packet 314: The SET_NMEA_OUTPUT command is very long
       //20 types of sentences are allowed: GLL / RMC / VTG / GGA / GSA / GSV / GRS / GST
@@ -96,7 +102,7 @@ void loop()
       configString = myI2CGPS.createMTKpacket(314, ",0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0");
       myI2CGPS.sendMTKpacket(configString);
     }
-    else if (incoming == '4')
+    else if (incoming == '5')
     {
       //Packet 886: Set navigation mode Normal=0 / Fitness=1 / Aviation=2 / Balloon=3 (80km space limit!)
       //Normal = general purpose
@@ -106,18 +112,21 @@ void loop()
       configString = myI2CGPS.createMTKpacket(886, ",3");
       myI2CGPS.sendMTKpacket(configString);
     }
-    else if (incoming == '5')
+    else if (incoming == '6')
     {
       //Packet 251: Set serial baud rate to 57600
       configString = myI2CGPS.createMTKpacket(251, ",57600");
       myI2CGPS.sendMTKpacket(configString);
+
+      Serial.println(F("Serial configuration command sent. No ACK is returned for this command."));
     }
-    else if (incoming == '6')
+    else if (incoming == '7')
     {
       //Packet 301: Set DGPS mode
       //0 = No DGPS source
       //1 = RTCM
       //2 = SBAS(Includes WAAS/EGNOS/GAGAN/MSAS)
+      //Note: You cannot enable SBAS/DGPS when update rate is faster than 5Hz
       configString = myI2CGPS.createMTKpacket(301, ",2");
       myI2CGPS.sendMTKpacket(configString);
     }
@@ -143,6 +152,8 @@ void loop()
       //so that it detects the external antenna
       configString = myI2CGPS.createMTKpacket(104, "");
       myI2CGPS.sendMTKpacket(configString);
+
+      Serial.println(F("Reset command sent. No ACK is returned for this command."));
     }
     else
     {
@@ -150,27 +161,14 @@ void loop()
     }
   }
 
-  //available() returns the number of new bytes available from the GPS module
-  while (myI2CGPS.available())
+  while (myI2CGPS.available()) //available() returns the number of new bytes available from the GPS module
   {
     gps.encode(myI2CGPS.read()); //Feed the GPS parser with a new .read() byte
   }
 
-  //We have new GPS data to deal with!
-  if (gps.location.isValid())
+  if (gps.time.isUpdated()) //Check to see if new GPS info is available
   {
-    Serial.print("Loc:");
-    Serial.print(gps.location.lat(), 6);
-    Serial.print(F(","));
-    Serial.print(gps.location.lng(), 6);
-
-    Serial.print(F(" SIV:"));
-    Serial.print(gps.satellites.value());
-
-    Serial.print(F(" HDOP:"));
-    Serial.print(gps.hdop.value());
-
-    Serial.println();
+    displayInfo();
   }
 
   //Check to see if we got a response from any command we recently sent
@@ -206,12 +204,43 @@ void printMenu(void)
 {
   Serial.println();
   Serial.println(F("1) Set update rate to 10Hz"));
-  Serial.println(F("2) Enable PPS LED"));
-  Serial.println(F("3) Turn off all sentences but RMC&GGA"));
-  Serial.println(F("4) Enable high altitude balloon mode"));
-  Serial.println(F("5) Set serial baud rate to 57600bps"));
-  Serial.println(F("6) Enable DGPS/SBAS"));
+  Serial.println(F("2) Set update rate to 1Hz"));
+  Serial.println(F("3) Enable PPS LED"));
+  Serial.println(F("4) Turn off all sentences but RMC&GGA"));
+  Serial.println(F("5) Enable high altitude balloon mode"));
+  Serial.println(F("6) Set serial baud rate to 57600bps"));
+  Serial.println(F("7) Enable DGPS/SBAS"));
   Serial.println(F("8) Enable/Disable Debugging"));
   Serial.println(F("9) Reset module"));
+}
+
+void displayInfo()
+{
+  //We have new GPS data to deal with!
+
+  if (gps.time.hour() < 10) Serial.print(F("0"));
+  Serial.print(gps.time.hour());
+  Serial.print(F(":"));
+  if (gps.time.minute() < 10) Serial.print(F("0"));
+  Serial.print(gps.time.minute());
+  Serial.print(F(":"));
+  if (gps.time.second() < 10) Serial.print(F("0"));
+  Serial.print(gps.time.second());
+
+  if (gps.location.isValid())
+  {
+    Serial.print(" Loc:");
+    Serial.print(gps.location.lat(), 6);
+    Serial.print(F(","));
+    Serial.print(gps.location.lng(), 6);
+
+    Serial.print(F(" SIV:"));
+    Serial.print(gps.satellites.value());
+
+    Serial.print(F(" HDOP:"));
+    Serial.print(gps.hdop.value());
+  }
+
+  Serial.println();
 }
 

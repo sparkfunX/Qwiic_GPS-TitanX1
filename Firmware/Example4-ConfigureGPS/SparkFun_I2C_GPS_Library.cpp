@@ -29,7 +29,7 @@
 
 //Sets up the sensor for constant read
 //Returns false if sensor does not respond
-boolean I2CGPS::begin(TwoWire &wirePort, uint32_t i2cSpeed, uint8_t i2caddr)
+boolean I2CGPS::begin(TwoWire &wirePort, uint32_t i2cSpeed)
 {
   //Bring in the user's choices
   _i2cPort = &wirePort; //Grab which port the user wants us to use
@@ -37,26 +37,32 @@ boolean I2CGPS::begin(TwoWire &wirePort, uint32_t i2cSpeed, uint8_t i2caddr)
   _i2cPort->begin();
   _i2cPort->setClock(i2cSpeed);
 
-  _i2caddr = i2caddr;
-
   _head = 0; //Reset the location holder
   _tail = 0;
 
-  //Ping the module to see if it responds correctly
+  //Ping the module to see if it responds
+  _i2cPort->beginTransmission(MT333x_ADDR);
+  _i2cPort->write(0); //Write dummy value
+  _i2cPort->endTransmission();
 
-  return (true); //Success!
+  if (_i2cPort->requestFrom(MT333x_ADDR, 1))
+    return (true); //Success!
+  else
+    return (false); //Module failed to respond
 }
 
 //Polls the GPS module to see if new data is available
 //Reads a 255 byte packet from GPS module
 //If new data is there, appends it to the gpsData array
-//Returns # of available bytes that can be read
-uint8_t I2CGPS::available()
+//Requires 25.5ms @ 100kHz I2C, 6.375ms @ 400kHz I2C
+//So call sparingly
+void I2CGPS::check()
 {
   //TODO: Re-write this function to be less tied to Arduino's 32 byte limit
   //Maybe pass a maxRead during .begin()
 
   uint8_t packetData[MAX_PACKET_SIZE]; //Store all incoming I2C bytes
+
   for (uint8_t x = 0 ; x < MAX_PACKET_SIZE ; x++)
     packetData[x] = 0x0A; //Fill with garbage byte
 
@@ -83,39 +89,54 @@ uint8_t I2CGPS::available()
     if (packetData[x] != 0x0A)
     {
       gpsData[_head++] = packetData[x];
+      if (_head == MAX_PACKET_SIZE) _head = 0; //Wrap variable
 
       if (_printDebug == true)
       {
-        if(_head == _tail)
+        if (_head == _tail)
         {
-          _debugSerial->println("Buffer overrun");
+          _debugSerial->println(F("Buffer overrun"));
         }
 
         //Print raw data
-        if (packetData[x] == '$') _debugSerial->println();
-        _debugSerial->write(packetData[x]);
+        //if (packetData[x] == '$') _debugSerial->println();
+        //_debugSerial->write(packetData[x]);
       }
     }
   }
+}
+
+//Returns # of available bytes that can be read
+uint8_t I2CGPS::available()
+{
+  //If tail=head then no new data is available in the local buffer
+  //So now check to see if the module has anything new in its buffer
+  if (_tail == _head)
+  {
+    check(); //Check to module to see if new I2C bytes are available
+  }
 
   //Return new data count
-  if(_head > _tail) return(_head - _tail);
-  if(_tail > _head) return(MAX_PACKET_SIZE - _tail + _head);
-  return(0); //No data available
+  if (_head > _tail) return (_head - _tail);
+  if (_tail > _head) return (MAX_PACKET_SIZE - _tail + _head);
+  return (0); //No data available
 }
 
 //Returns the next available byte from the gpsData array
 //Returns 0 if no byte available
 uint8_t I2CGPS::read(void)
 {
-  if(_tail != _head)
-    return(gpsData[_tail++]);
+  if (_tail != _head)
+  {
+    uint8_t datum = gpsData[_tail++];
+    if (_tail == MAX_PACKET_SIZE) _tail = 0; //Wrap variable
+    return (datum);
+  }
   else
-    return(0); //No new data
+    return (0); //No new data
 }
 
-//Enables serial printing of the raw incoming GPS characters
-//Helpful for seeing what is coming in
+//Enables serial printing of local error messages
 void I2CGPS::enableDebugging(Stream &debugPort = Serial)
 {
   _debugSerial = &debugPort; //Grab which port the user wants us to use for debugging
@@ -140,7 +161,9 @@ boolean I2CGPS::sendMTKpacket(String command)
 {
   if (command.length() > 255)
   {
-    _debugSerial->println("Command message too long!");
+    if (_printDebug == true)
+      _debugSerial->println(F("Command message too long!"));
+
     return (false);
   }
 
