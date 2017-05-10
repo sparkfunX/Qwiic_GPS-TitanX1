@@ -19,27 +19,43 @@
 */
 
 #include <Wire.h>
+
+#include "SparkFun_I2C_GPS_Library.h" //Use Library Manager or download here: https://github.com/sparkfun/SparkFun_I2C_GPS_Library
+I2CGPS myI2CGPS; //Hook object to the library
+
 #include <TinyGPS++.h> //From: https://github.com/mikalhart/TinyGPSPlus
-
 TinyGPSPlus gps; //Declare gps object
-
 
 void setup()
 {
   Serial.begin(115200);
+  Serial.println();
   Serial.println("GTOP Read Example");
 
-  Wire.begin();
-  Wire.setClock(400000); //Run I2C at fast 400kHz
+  myI2CGPS.begin();
 
-  enableDebugging(); //Turn on printing of GPS strings
-  //disableDebugging(); //Turn on printing of GPS strings
+  //myI2CGPS.enableDebugging(); //Turn on printing of GPS strings
+  myI2CGPS.disableDebugging(); //Turn on printing of GPS strings
 }
 
 void loop()
 {
+  while (myI2CGPS.available()) //available() returns the number of new bytes available from the GPS module
+  {
+    gps.encode(myI2CGPS.read()); //Feed the GPS parser
+  }
 
-  if (checkGPS() == true)
+  if (gps.time.isUpdated()) //Check to see if new GPS info is available
+  {
+    displayInfo();
+  }
+
+}
+
+//Display new GPS info
+void displayInfo()
+{
+  if (gps.location.isValid())
   {
     //We have new GPS data to deal with!
     Serial.println();
@@ -63,7 +79,7 @@ void loop()
       if (gps.time.second() < 10) Serial.print(F("0"));
       Serial.print(gps.time.second());
     }
-    
+
     Serial.println(); //Done printing time
 
     if (gps.location.isValid())
@@ -84,8 +100,6 @@ void loop()
   {
     //Serial.println(F("GPS not yet valid"));
   }
-
-  delay(500);
 }
 
 
