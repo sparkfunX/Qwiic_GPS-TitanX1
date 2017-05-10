@@ -34,7 +34,8 @@ void loop()
 {
   while (myI2CGPS.available()) //available() returns the number of new bytes available from the GPS module
   {
-    byte incoming = myI2CGPS.read(); //Read the latset byte
+    byte incoming = myI2CGPS.read(); //Read the latest byte from Qwiic GPS
+
     if(incoming == '$') Serial.println(); //Break the sentences onto new lines
     Serial.write(incoming); //Print this character
   }
