@@ -54,56 +54,29 @@ boolean I2CGPS::begin(TwoWire &wirePort, uint32_t i2cSpeed)
 //Polls the GPS module to see if new data is available
 //Reads a 255 byte packet from GPS module
 //If new data is there, appends it to the gpsData array
-//Requires 25.5ms @ 100kHz I2C, 6.375ms @ 400kHz I2C
-//So call sparingly
+//Function requires 26ms @ 100kHz I2C, 9ms @ 400kHz I2C so call sparingly
 void I2CGPS::check()
 {
   //TODO: Re-write this function to be less tied to Arduino's 32 byte limit
   //Maybe pass a maxRead during .begin()
 
-  uint8_t packetData[MAX_PACKET_SIZE]; //Store all incoming I2C bytes
-
   for (uint8_t x = 0 ; x < MAX_PACKET_SIZE ; x++)
-    packetData[x] = 0x0A; //Fill with garbage byte
-
-  //Arduino can only Wire.read() in 32 byte chunks. Yay.
-  for (uint8_t chunk = 0 ; chunk < 7 ; chunk++) //8 chunks * 32 = 256 bytes total so we need to shave one
   {
-    if (_i2cPort->requestFrom(MT333x_ADDR, 32))
+    if (x % 32 == 0) //Arduino can only Wire.read() in 32 byte chunks. Yay.
+      _i2cPort->requestFrom(MT333x_ADDR, 32); //Request 32 more bytes
+
+    uint8_t incoming = _i2cPort->read();
+    if (incoming != 0x0A)
     {
-      for (uint8_t x = 0 ; x < 32 ; x++) //Read 32 bytes into the 255 byte array
-        packetData[(chunk * 32) + x] = _i2cPort->read();
+      //Record this byte
+      gpsData[_head++] = incoming;
+      _head %= MAX_PACKET_SIZE; //Wrap variable
+
+      if (_printDebug == true && _head == _tail)
+        _debugSerial->println(F("Buffer overrun"));
     }
   }
 
-  //Read final 31 bytes
-  if (_i2cPort->requestFrom(MT333x_ADDR, 31))
-  {
-    for (uint8_t x = 0 ; x < 31 ; x++) //Read 31 bytes into the 255 byte array
-      packetData[(7 * 32) + x] = _i2cPort->read();
-  }
-
-  //Move any valid bytes from packetData to gpsData array
-  for (uint8_t x = 0 ; x < MAX_PACKET_SIZE ; x++)
-  {
-    if (packetData[x] != 0x0A)
-    {
-      gpsData[_head++] = packetData[x];
-      if (_head == MAX_PACKET_SIZE) _head = 0; //Wrap variable
-
-      if (_printDebug == true)
-      {
-        if (_head == _tail)
-        {
-          _debugSerial->println(F("Buffer overrun"));
-        }
-
-        //Print raw data
-        //if (packetData[x] == '$') _debugSerial->println();
-        //_debugSerial->write(packetData[x]);
-      }
-    }
-  }
 }
 
 //Returns # of available bytes that can be read
