@@ -13,7 +13,7 @@
   Serial.print it out at 115200 baud to serial monitor.
 */
 
-#include "SparkFun_I2C_GPS_Library.h" //Use Library Manager or download here: https://github.com/sparkfun/SparkFun_I2C_GPS_Library
+#include <SparkFun_I2C_GPS_Arduino_Library.h> //Use Library Manager or download here: https://github.com/sparkfun/SparkFun_I2C_GPS_Arduino_Library
 I2CGPS myI2CGPS; //Hook object to the library
 
 #include <TinyGPS++.h> //From: https://github.com/mikalhart/TinyGPSPlus
@@ -30,9 +30,6 @@ void setup()
     while (1); //Freeze!
   }
   Serial.println("GPS module found!");
-
-  //myI2CGPS.enableDebugging(); //Turn on printing of GPS strings
-  myI2CGPS.disableDebugging(); //Turn off printing of GPS strings
 }
 
 void loop()

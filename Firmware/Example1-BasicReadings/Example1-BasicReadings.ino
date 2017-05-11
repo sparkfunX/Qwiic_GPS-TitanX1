@@ -14,7 +14,7 @@
   Serial.print it out at 115200 baud to serial monitor.
 */
 
-#include "SparkFun_I2C_GPS_Library.h" //Use Library Manager or download here: https://github.com/sparkfun/SparkFun_I2C_GPS_Library
+#include "SparkFun_I2C_GPS_Arduino_Library.h" //Use Library Manager or download here: https://github.com/sparkfun/SparkFun_I2C_GPS_Arduino_Library
 I2CGPS myI2CGPS; //Hook object to the library
 
 void setup()
